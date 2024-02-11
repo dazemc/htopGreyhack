@@ -1,1 +1,1 @@
-Simple htop for Grey Hack
+htop that prunes new processes via PID
