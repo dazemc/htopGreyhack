@@ -1,50 +1,76 @@
-// htop
+// htop with PID pruning
 symbols = ["# ", " -"]
+closed_procs = []
+procs_pid_total = 0
+first_run = 1
 while true
-    procs = get_shell.host_computer.show_procs
-    procs_all = []
-    procs_cpu = 0
-    procs_mem = 0
+computer = get_shell.host_computer
+procs = computer.show_procs
+procs_all = []
+procs_pid = []
+procs_cpu = 0
+procs_mem = 0
 
-    set_used = function(procs)
-        hash = symbols[0] * (procs/10)
-        return "[" + hash
-    end function
+set_used = function(procs)
+	hash = symbols[0] * (procs/10)
+	return "[" + hash
+end function
 
-    set_unused = function(procs)
-        dash = symbols[1] * ((101 - procs)/10)
-        return dash + "]"
-    end function
+set_unused = function(procs)
+	dash = symbols[1] * ((101 - procs)/10)
+	return dash + "]"
+end function
 
-    for i in range(0, procs.len - 1)
-        if procs[i] == "%" then
-            value = procs[i-4:i]
-            if value[0] == " " then
-                value = value[1:]
-            end if
-            if value[0] == "0" then
-                value = procs[i-5:i]
-            end if
-            procs_all.push(value.val)
-        end if
-    end for
-    for i in range(0, procs_all.len - 1)
-        if i % 2 == 1 then
-            procs_mem = procs_mem + procs_all[i]
-        else
-            procs_cpu = procs_cpu + procs_all[i]
-        end if
-    end for
+alert_pid = function(pid_list)
+	return
+end function
 
-    mem_used = set_used(procs_mem)
-    procs_used = set_used(procs_cpu)
-    mem_unused = set_unused(procs_mem)
-    procs_unused = set_unused(procs_cpu)
-    print("Total Memory Usage: " + procs_mem + "%")
-    print(mem_used + mem_unused)
-    print("Total CPU Usage: " + procs_cpu + "%")
-    print(procs_used + procs_unused)
-    print(procs)
-    wait(0.1)
-    clear_screen
+for i in range(0, procs.len - 1)
+	if procs[i] == "%" then
+		value = procs[i-4:i]
+		if value[0] == " " then
+			value = value[1:]
+		end if
+		if value[0] == "0" then
+			value = procs[i-5:i]
+		end if
+		procs_all.push(value.val)
+	end if
+	if typeof(procs[i].to_int) != "string" then
+		pid_val = procs[i:i + 4].to_int
+		if typeof(pid_val) != "string" and str(pid_val).len == 4 then
+			procs_pid.push(pid_val)
+		end if
+	end if
+end for
+for i in range(0, procs_all.len - 1)
+	if i % 2 == 1 then
+		procs_mem = procs_mem + procs_all[i]
+	else
+		procs_cpu = procs_cpu + procs_all[i]
+	end if
+end for
+
+if procs_pid.len > procs_pid_total and not first_run then
+	added_proc = procs_pid[-1]
+	closed_procs.push(added_proc)
+	computer.close_program(procs_pid[-1])
+end if
+
+mem_used = set_used(procs_mem)
+procs_used = set_used(procs_cpu)
+mem_unused = set_unused(procs_mem)
+procs_unused = set_unused(procs_cpu)
+procs_pid_total = procs_pid.len
+print("Processes that have been closed: " + closed_procs)
+print("Total Memory Usage: " + procs_mem + "%")
+print(mem_used + mem_unused)
+print("Total CPU Usage: " + procs_cpu + "%")
+print(procs_used + procs_unused)
+print(procs)
+wait(0.1)
+clear_screen
+if first_run then
+	first_run = 0;
+end if
 end while
